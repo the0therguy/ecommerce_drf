@@ -115,3 +115,13 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = '__all__'
+
+
+class UpdateOrderSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source="customer.full_name", read_only=True)
+    order_uuid = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = '__all__'
+        read_only_fields = ('order_uuid', 'total_price', 'customer')

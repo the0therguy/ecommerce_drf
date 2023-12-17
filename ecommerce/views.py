@@ -316,6 +316,17 @@ class PendingOrderView(APIView):
         return Response({'order': order_serializer.data, 'order_items': order_item_serializer.data},
                         status=status.HTTP_200_OK)
 
+    def put(self, request):
+        order = self.get_order(user=request.user)
+        order_serializer = UpdateOrderSerializer(order, data=request.data, partial=True)
+        if order_serializer.is_valid():
+            order_serializer.save()
+            order_item_list = OrderItem.objects.filter(order=order, customer=request.user)
+            order_item_serializer = OrderItemSerializer(order_item_list, many=True)
+            return Response({'order': order_serializer.data, 'order_items': order_item_serializer.data},
+                            status=status.HTTP_200_OK)
+        return Response(order_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class OrderItemUpdateDelete(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
