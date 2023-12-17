@@ -42,6 +42,8 @@ class LogoutSerializer(serializers.Serializer):
 
 
 class ShopSerializer(serializers.ModelSerializer):
+    shop_uuid = serializers.UUIDField(read_only=True)
+
     class Meta:
         model = Shop
         fields = '__all__'
@@ -61,7 +63,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    shop_name = serializers.CharField(source="shop.name")
+    shop_name = serializers.CharField(source="shop.name", read_only=True)
+    product_uuid = serializers.UUIDField(read_only=True)
 
     class Meta:
         model = Product
@@ -69,7 +72,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class ProductUpdateSerializer(serializers.ModelSerializer):
-    shop_name = serializers.CharField(source="shop.name")
+    shop_name = serializers.CharField(source="shop.name", read_only=True)
 
     class Meta:
         model = Product
@@ -94,3 +97,21 @@ class ReviewUpdateSerializer(serializers.ModelSerializer):
         model = Review
         fields = '__all__'
         read_only_fields = ('user', 'product', 'review_uuid')
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    order_item_uuid = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = '__all__'
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source="customer.full_name", read_only=True)
+    order_uuid = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = '__all__'

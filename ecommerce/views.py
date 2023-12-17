@@ -9,6 +9,7 @@ import uuid
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
+from decimal import Decimal
 
 
 # Create your views here.
@@ -205,31 +206,142 @@ class ReviewList(generics.ListCreateAPIView):
         return super().post(request, *args, **kwargs)
 
 
-class ReviewRetrieve(APIView):
+class ReviewRetrieve(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    queryset = Review.objects.all()
+    serializer_class = ReviewUpdateSerializer
+
+    def put(self, request, *args, **kwargs):
+        review = self.get_object()
+        if review.user != request.user:
+            return Response("You can't edit this review", status=status.HTTP_400_BAD_REQUEST)
+
+        return super().put(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        review = self.get_object()
+        if review.user != request.user:
+            return Response("You can't delete this review", status=status.HTTP_400_BAD_REQUEST)
+
+        return super().delete(request, *args, **kwargs)
+
+
+class AddToCartView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_review(self, review_uuid):
+    def get_product(self, product_uuid):
         try:
-            return Review.objects.get(review_uuid=review_uuid)
-        except Review.DoesNotExist:
+            return Product.objects.get(product_uuid=product_uuid)
+        except Product.DoesNotExist:
             return None
 
-    def put(self, request, review_uuid):
-        review = self.get_review(review_uuid=review_uuid)
-        if review.user != request.user:
-            return Response("You can't edit this review", status=status.HTTP_400_BAD_REQUEST)
+    def get_order(self, user):
+        try:
+            return Order.objects.get(customer=user, status='Pending')
+        except Order.DoesNotExist:
+            return None
 
-        serializer = ReviewUpdateSerializer(review, data=request.data, partial=True)
-        if serializer.is_valid():
+    def get_order_item(self, product, order, user):
+        try:
+            return OrderItem.objects.get(product=product, order=order, customer=user)
+        except OrderItem.DoesNotExist:
+            return None
+
+    def get(self, request, product_uuid):
+        order = self.get_order(user=request.user)
+        if not order:
+            try:
+                order = Order.objects.create(order_uuid=str(uuid.uuid4()), customer=request.user)
+                order.save()
+            except Exception as e:
+                return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
+        product = self.get_product(product_uuid=product_uuid)
+        if not product:
+            return Response('No product found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        order_item = self.get_order_item(product=product, order=order, user=request.user)
+        if not order_item:
+            try:
+                order_item = OrderItem.objects.create(
+                    order_item_uuid=str(uuid.uuid4()),
+                    product=product,
+                    quantity=1,
+                    item_price=Decimal(product.price),  # Convert product price to Decimal
+                    order=order,
+                    customer=request.user
+                )
+                order_item.save()
+
+                order.total_price += Decimal(order_item.item_price)  # Convert item_price to Decimal
+                order.save()
+
+                return Response(status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
+        previous_price = Decimal(order_item.item_price)  # Convert item_price to Decimal
+        previous_quantity = order_item.quantity
+        order_item.quantity += 1
+        order_item.item_price = Decimal(previous_quantity + 1) * Decimal(
+            product.price)  # Convert product price to Decimal
+        order.total_price += (Decimal(previous_quantity + 1) * Decimal(product.price)) - previous_price
+        order_item.save()
+        order.save()
+
+        return Response(status=status.HTTP_200_OK)
+
+
+class PendingOrderView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_order(self, user):
+        try:
+            return Order.objects.get(customer=user, status='Pending')
+        except Order.DoesNotExist:
+            return None
+
+    def get(self, request):
+        order = self.get_order(user=request.user)
+        if not order:
+            try:
+                order = Order.objects.create(**{'order_uuid': str(uuid.uuid4()), 'customer': request.user})
+                order.save()
+            except Exception as e:
+                return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
+        order_item_list = OrderItem.objects.filter(order=order, customer=request.user)
+        order_item_serializer = OrderItemSerializer(order_item_list, many=True)
+        order_serializer = OrderSerializer(order)
+        return Response({'order': order_serializer.data, 'order_items': order_item_serializer.data},
+                        status=status.HTTP_200_OK)
+
+
+class OrderItemUpdateDelete(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = OrderItemSerializer
+    lookup_field = 'order_item_uuid'  # Specify the lookup field
+
+    def get_queryset(self):
+        return OrderItem.objects.filter(customer=self.request.user)
+
+    def perform_update(self, serializer):
+        quantity = self.request.data.get('quantity', 1)
+        if quantity == 0:
+            order_item = serializer.instance
+            order_item.order.total_price -= order_item.item_price
+            order_item.order.save()
+            order_item.delete()
+        else:
+            new_price = quantity * serializer.instance.product.price
+            serializer.instance.order.total_price -= serializer.instance.item_price
+            serializer.instance.order.total_price += new_price
+            serializer.instance.item_price = new_price
+            serializer.instance.quantity = quantity
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer.instance.order.save()
 
-    def delete(self, request, review_uuid):
-        review = self.get_review(review_uuid=review_uuid)
-        if review.user != request.user:
-            return Response("You can't edit this review", status=status.HTTP_400_BAD_REQUEST)
-
-        review.delete()
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def perform_destroy(self, instance):
+        instance.order.total_price -= instance.item_price
+        instance.order.save()
+        instance.delete()

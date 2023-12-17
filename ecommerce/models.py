@@ -27,7 +27,7 @@ class Shop(models.Model):
     trade_license_no = models.CharField(max_length=20, null=True, blank=True)
     phone_number = models.CharField(max_length=15)
 
-    owner = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    owner = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -36,9 +36,8 @@ class Shop(models.Model):
 def get_product_image_path(instance, filename):
     unique_filename = f"{str(uuid.uuid4())}-{filename}"
 
-    # Get the script_uuid and use it as the folder name
-    product_uuid = instance.script.product_uuid
-    return f"script_images/{product_uuid}/{unique_filename}"
+    product_uuid = instance.product_uuid
+    return f"product_images/{product_uuid}/{unique_filename}"
 
 
 PRODUCT_CATEGORIES = [
@@ -55,7 +54,7 @@ PRODUCT_CATEGORIES = [
 class Product(models.Model):
     product_uuid = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=220)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     category = models.CharField(max_length=220, choices=PRODUCT_CATEGORIES)
     description = models.TextField(null=True, blank=True)
     image = models.ImageField(upload_to=get_product_image_path, null=True, blank=True)
@@ -63,19 +62,6 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
-
-
-class OrderItem(models.Model):
-    order_item_uuid = models.CharField(max_length=50, unique=True)
-    product = models.ForeignKey(Product, models.SET_NULL, null=True, blank=True)
-    quantity = models.IntegerField(default=1, validators=[MinValueValidator(1)])
-    item_price = models.DecimalField(max_digits=10, decimal_places=2)
-
-    created_on = models.DateTimeField(auto_now_add=True)
-    customer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-
-    def __str__(self):
-        return self.order_item_uuid
 
 
 PAYMENT_OPTION = [
@@ -90,6 +76,7 @@ DELIVERY_OPTION = [
 ]
 
 STATUS_CHOICES = [
+    ('Pending', 'Pending'),
     ('Processing', 'Processing'),
     ('Completed', 'Completed'),
 ]
@@ -97,27 +84,30 @@ STATUS_CHOICES = [
 
 class Order(models.Model):
     order_uuid = models.CharField(max_length=50, unique=True)
-    order_item = models.ForeignKey(OrderItem, on_delete=models.SET_NULL, null=True, blank=True)
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     created_on = models.DateTimeField(auto_now_add=True)
     payment_mode = models.CharField(max_length=100, choices=PAYMENT_OPTION, default='Cash on Delivery')
     delivery_mode = models.CharField(max_length=100, choices=DELIVERY_OPTION, default='Pickup')
-    status = models.CharField(max_length=100, choices=STATUS_CHOICES, default='Processing')
+    shipping_address = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=100, choices=STATUS_CHOICES, default='Pending')
     customer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.customer.username
 
 
-class Shipping(models.Model):
-    shipping_uuid = models.CharField(max_length=50, unique=True)
-    name = models.CharField(max_length=220)
-    address = models.TextField()
-    user = models.ForeignKey(User, models.SET_NULL, null=True, blank=True)
-    order = models.ForeignKey(Order, models.SET_NULL, null=True, blank=True)
+class OrderItem(models.Model):
+    order_item_uuid = models.CharField(max_length=50, unique=True)
+    product = models.ForeignKey(Product, models.SET_NULL, null=True, blank=True)
+    quantity = models.IntegerField(default=1, validators=[MinValueValidator(0)])
+    item_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
+
+    created_on = models.DateTimeField(auto_now_add=True)
+    customer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return self.name
+        return self.order_item_uuid
 
 
 class Review(models.Model):

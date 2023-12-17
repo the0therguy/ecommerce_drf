@@ -21,5 +21,8 @@ urlpatterns = [
     path('api/product/v1/products/', ProductViewSet.as_view({'get': 'list'}), name='product-list'),
     path('api/product/v1/product/<str:product_uuid>/', ProductRetrieveView.as_view(), name='product'),
     path('api/reviews/v1/reviews/<str:product_uuid>/', ReviewList.as_view(), name='reviews'),
-    path('api/reviews/v1/review/<str:review_uuid>/', ReviewRetrieve.as_view(), name='review')
+    path('api/reviews/v1/review/<str:review_uuid>/', ReviewRetrieve.as_view(), name='review'),
+    path('api/order/v1/add-to-cart/<str:product_uuid>/', AddToCartView.as_view()),
+    path('api/order/v1/order-confirm/', PendingOrderView.as_view()),
+    path('api/order/v1/order-item/<str:order_item_uuid>/', OrderItemUpdateDelete.as_view())
 ]
