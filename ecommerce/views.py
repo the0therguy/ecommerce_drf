@@ -356,3 +356,76 @@ class OrderItemUpdateDelete(generics.RetrieveUpdateDestroyAPIView):
         instance.order.total_price -= instance.item_price
         instance.order.save()
         instance.delete()
+
+
+class OrderListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        orders = Order.get_completed_orders_for_user(request.user)
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class UpdateOrderView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_order(self, order_uuid, user):
+        try:
+            return Order.objects.get(order_uuid=order_uuid, customer=user)
+        except Order.DoesNotExist:
+            return None
+
+    def get(self, request, order_uuid):
+        order = self.get_order(order_uuid=order_uuid, user=request.user)
+        if not order:
+            return Response("There is no order associate with this id", status=status.HTTP_400_BAD_REQUEST)
+        serializer = OrderSerializer(order)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, order_uuid):
+        order = self.get_order(order_uuid=order_uuid, user=request.user)
+        if not order:
+            return Response("There is no order associate with this id", status=status.HTTP_400_BAD_REQUEST)
+        order.status = 'Completed'
+        order.save()
+        serializer = OrderSerializer(order)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ShopAnalyticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        try:
+            shop = Shop.objects.get(owner=request.user)
+        except Shop.DoesNotExist:
+            return Response("Shop not found", status=status.HTTP_404_NOT_FOUND)
+
+        # Calculate total revenue for the shop
+        total_revenue = OrderItem.objects.filter(order__status='Completed', product__shop=shop).aggregate(
+            total_revenue=models.Sum(models.F('item_price'))
+        )['total_revenue'] or 0.0
+
+        # Get the total number of orders
+        total_orders = OrderItem.objects.filter(order__status='Completed', product__shop=shop).count()
+
+        # Get the top-selling products
+        top_selling_products = OrderItem.objects.filter(order__status='Completed', product__shop=shop).values(
+            'product__name'
+        ).annotate(
+            total_quantity=models.Sum('quantity')
+        ).order_by('-total_quantity')[:5]
+
+        # Prepare the response data
+        response_data = {
+            'total_revenue': total_revenue,
+            'total_orders': total_orders,
+            'top_selling_products': top_selling_products
+        }
+
+        # Serialize the data and return the response
+        serializer = ShopSerializer(shop)
+        response_data['shop_details'] = serializer.data
+        return Response(response_data, status=status.HTTP_200_OK)

@@ -92,6 +92,10 @@ class Order(models.Model):
     status = models.CharField(max_length=100, choices=STATUS_CHOICES, default='Pending')
     customer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
+    @classmethod
+    def get_completed_orders_for_user(cls, user):
+        return cls.objects.filter(customer=user).exclude(status='Pending')
+
     def __str__(self):
         return self.customer.username
 
