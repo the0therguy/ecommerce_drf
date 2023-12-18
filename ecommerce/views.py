@@ -13,6 +13,12 @@ from decimal import Decimal
 
 
 # Create your views here.
+class Home(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response("Hello", status=status.HTTP_200_OK)
+
 
 class SignUpView(generics.CreateAPIView):
     queryset = User.objects.all()
