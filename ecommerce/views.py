@@ -197,7 +197,7 @@ class ReviewList(generics.ListCreateAPIView):
         product_uuid = self.kwargs.get('product_uuid')
         product = self.get_product(product_uuid)
         if product:
-            serializer.save(product=product, user=self.request.user)
+            serializer.save(product=product, user=self.request.user, review_uuid=str(uuid.uuid4()))
 
     def post(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -289,7 +289,7 @@ class AddToCartView(APIView):
         order_item.save()
         order.save()
 
-        return Response(status=status.HTTP_200_OK)
+        return Response("Your product is added to the cart", status=status.HTTP_200_OK)
 
 
 class PendingOrderView(APIView):
@@ -397,7 +397,6 @@ class ShopAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-
         try:
             shop = Shop.objects.get(owner=request.user)
         except Shop.DoesNotExist:
@@ -418,11 +417,22 @@ class ShopAnalyticsView(APIView):
             total_quantity=models.Sum('quantity')
         ).order_by('-total_quantity')[:5]
 
+        # Get reviews for products in the shop
+        product_reviews = Review.objects.filter(product__shop=shop)
+        review_serializer = ReviewSerializer(product_reviews, many=True)
+
+        # Get products in the shop where the order is pending
+        pending_order_products = OrderItem.objects.filter(order__status='Pending', product__shop=shop).values(
+            'product__name', 'quantity'
+        )
+
         # Prepare the response data
         response_data = {
             'total_revenue': total_revenue,
             'total_orders': total_orders,
-            'top_selling_products': top_selling_products
+            'top_selling_products': top_selling_products,
+            'product_reviews': review_serializer.data,
+            'pending_order_products': pending_order_products,
         }
 
         # Serialize the data and return the response

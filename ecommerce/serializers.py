@@ -81,8 +81,9 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    product = ProductSerializer()
-    user = ProfileSerializer()
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    user = serializers.CharField(source='user.full_name', read_only=True)
+    review_uuid = serializers.UUIDField(read_only=True)
 
     class Meta:
         model = Review
@@ -90,8 +91,9 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class ReviewUpdateSerializer(serializers.ModelSerializer):
-    product = ProductSerializer()
-    user = ProfileSerializer()
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    user = serializers.CharField(source='user.full_name', read_only=True)
+    review_uuid = serializers.UUIDField(read_only=True)
 
     class Meta:
         model = Review

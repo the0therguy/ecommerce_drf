@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 import os
 import uuid
 from django.utils import timezone
+from decimal import Decimal
 
 
 # Create your models here.
@@ -54,7 +55,7 @@ PRODUCT_CATEGORIES = [
 class Product(models.Model):
     product_uuid = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=220)
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal(0.0))
     category = models.CharField(max_length=220, choices=PRODUCT_CATEGORIES)
     description = models.TextField(null=True, blank=True)
     image = models.ImageField(upload_to=get_product_image_path, null=True, blank=True)
@@ -84,7 +85,7 @@ STATUS_CHOICES = [
 
 class Order(models.Model):
     order_uuid = models.CharField(max_length=50, unique=True)
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal(0.0))
     created_on = models.DateTimeField(auto_now_add=True)
     payment_mode = models.CharField(max_length=100, choices=PAYMENT_OPTION, default='Cash on Delivery')
     delivery_mode = models.CharField(max_length=100, choices=DELIVERY_OPTION, default='Pickup')
@@ -104,7 +105,7 @@ class OrderItem(models.Model):
     order_item_uuid = models.CharField(max_length=50, unique=True)
     product = models.ForeignKey(Product, models.SET_NULL, null=True, blank=True)
     quantity = models.IntegerField(default=1, validators=[MinValueValidator(0)])
-    item_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    item_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal(0.0))
     order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
 
     created_on = models.DateTimeField(auto_now_add=True)
