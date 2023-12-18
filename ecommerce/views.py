@@ -65,10 +65,14 @@ class ChangePasswordView(generics.CreateAPIView):
 
 class ShopGetCreateView(generics.ListCreateAPIView, generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = ShopSerializer
 
     def get_queryset(self):
         return Shop.objects.filter(owner=self.request.user)
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return ShopCreateSerializer
+        return UpdateShopSerializer
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user, shop_uuid=str(uuid.uuid4()))
@@ -83,7 +87,7 @@ class ShopGetCreateView(generics.ListCreateAPIView, generics.RetrieveUpdateDestr
 
 class ShopProductListView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = ProductSerializer
+    serializer_class = ProductCreateSerializer
 
     def get_queryset(self):
         shop = self.get_shop(owner=self.request.user)
@@ -178,7 +182,6 @@ class ProductRetrieveView(APIView):
 
 class ReviewList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = ReviewSerializer
 
     def get_product(self, product_uuid):
         try:
@@ -192,6 +195,11 @@ class ReviewList(generics.ListCreateAPIView):
         if product:
             return Review.objects.filter(product=product)
         return Review.objects.none()
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return ReviewCreateSerializer
+        return ReviewSerializer
 
     def perform_create(self, serializer):
         product_uuid = self.kwargs.get('product_uuid')
@@ -276,7 +284,7 @@ class AddToCartView(APIView):
                 order.total_price += Decimal(order_item.item_price)  # Convert item_price to Decimal
                 order.save()
 
-                return Response(status=status.HTTP_200_OK)
+                return Response("Your product is added to the cart", status=status.HTTP_200_OK)
             except Exception as e:
                 return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
 

@@ -49,6 +49,14 @@ class ShopSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ShopCreateSerializer(serializers.ModelSerializer):
+    shop_uuid = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = Shop
+        exclude = ['owner']
+
+
 class UpdateShopSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shop
@@ -60,6 +68,15 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['full_name', 'username']
+
+
+class ProductCreateSerializer(serializers.ModelSerializer):
+    shop_name = serializers.CharField(source="shop.name", read_only=True)
+    product_uuid = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = Product
+        exclude = ['shop']
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -78,6 +95,15 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
         model = Product
         fields = '__all__'
         read_only_fields = ('shop', 'product_uuid')
+
+
+class ReviewCreateSerializer(serializers.ModelSerializer):
+    user = serializers.CharField(source='user.full_name', read_only=True)
+    review_uuid = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = Review
+        exclude = ['product']
 
 
 class ReviewSerializer(serializers.ModelSerializer):

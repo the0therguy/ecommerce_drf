@@ -1,4 +1,4 @@
-# Financial Health Score Calculator
+# Ecommerce using Django, DjangoRestFramework
 
 ## Description
 This Django project serves as a Ecommerce. Where shop owner can upload their products and customers can buy them from the shop directly. 
@@ -63,3 +63,13 @@ For any inquiries, reach out to email: ifty545@gmail.com.
 live URL: https://ecommerce-drf-59wk.onrender.com
 
 swagger documentation URL: https://ecommerce-drf-59wk.onrender.com/docs
+
+### Dockerize the Project
+1. Build the Docker Container
+   ```bash
+   docker-compose build
+   ```
+2. Run the Docker Container
+   ```bash
+   docker-compose up
+   ```
