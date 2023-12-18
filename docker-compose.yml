@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  userservice:
+    build: .
+    command: gunicorn -b 0.0.0.0:8000 ecommerce_drf.wsgi:application
+    volumes:
+      - .:/app/
+    ports:
+      - 8000:8000
+    image: app:ecommerce_drf
+    container_name: ecommerce_drf
