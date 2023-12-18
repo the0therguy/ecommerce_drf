@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-#%7)ld6bq$v8!a#4@s@!w)@xbox=(ykojh7ctfd(s^$d*rq(ez
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -180,3 +180,4 @@ MEDIA_URL = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
